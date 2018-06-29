@@ -6,7 +6,6 @@ from .io import Export
 
 _export = Export()
 path_out = _export.path_out
-_count = 0
 
 
 def export_df(*args, **kwargs):
