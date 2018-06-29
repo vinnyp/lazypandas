@@ -158,3 +158,6 @@ venv.bak/
 
 # pycharm
 .idea/
+
+# file export
+*.csv
