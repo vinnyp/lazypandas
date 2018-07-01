@@ -2,6 +2,7 @@ import datetime
 import glob
 import os
 import pandas as pd
+import logging
 
 
 class Export(object):
@@ -14,6 +15,7 @@ class Export(object):
     def __new__(cls, *args, **kwargs):
         if not cls._singleton:
             cls._singleton = super(Export, cls).__new__(cls, *args, **kwargs)
+            cls.logger = logging.getLogger(__name__)
         return cls._singleton
 
     @property
@@ -29,12 +31,19 @@ class Export(object):
     def timestamp_label(self):
         return self._timestamp_label
 
-    @timestamp_label.setter
-    def timestamp_label(self, value):
-        self._timestamp_label = value
-        return
+    @staticmethod
+    def _file_exists(file_name):
+        file = glob.glob(os.path.join(file_name))
+        exists = False
+
+        if len(file) > 0:
+            exists = True
+
+        return exists
 
     def export_df(self, df, label='', show_index=False, trace=True, *args, **kwargs):
+        self.logger.info("Export path: %s", self.path_out)
+
         if label == '':
             label = 'iteration_'
 
@@ -50,17 +59,33 @@ class Export(object):
         if not isinstance(trace, bool):
             raise TypeError('Expected type bool, not ' + str(type(trace)))
 
-        all_files = glob.glob(os.path.join(self.path_out, self.timestamp_label + '*.csv'))
+        all_files = glob.glob(os.path.join(self.path_out, self.timestamp_label + label + '*.csv'))
 
         file_count = len(all_files)
+        self.logger.info("Previous versions found: %s", file_count)
+
+        buffer = ''
 
         if trace:
-            buffer = self.path_out + self.timestamp_label + label + str(file_count + 1) + '.csv'
-            df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
-            print('Exported Trace: ' + buffer)
+            try:
+                buffer = self.path_out + self.timestamp_label + label + str(file_count + 1) + '.csv'
+                df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
+            except Exception as e:
+                self.logger.exception(self, "Exception: ", e)
+
         elif not trace:
-            buffer = self.path_out + self.timestamp_label + label + '.csv'
-            df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
-            print('Exported Final: ' + buffer)
+            try:
+                buffer = self.path_out + self.timestamp_label + label + '.csv'
+                df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
+            except Exception as e:
+                self.logger.exception(self, "Exception: ", e)
+
+        file_exists = self._file_exists(buffer)
+
+        if not file_exists:
+            raise IOError("Exported file not found.")
+        else:
+            self.logger.info('Exported trace: %s', buffer)
+            print('Exported: ' + buffer)
 
         return
