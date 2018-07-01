@@ -2,14 +2,23 @@
 
 from __future__ import absolute_import
 from . import io
-from .io import Export
+from .io import Export, Import
 import logging
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
+_import = Import()
 _export = Export()
+
+path_in = _import.path_in
 path_out = _export.path_out
 timestamp_label = _export.timestamp_label
+
+
+def import_df(*args, **kwargs):
+    _import.path_in = path_in
+    return _import.import_df(*args, **kwargs)
+
 
 def export_df(*args, **kwargs):
     _export.path_out = path_out

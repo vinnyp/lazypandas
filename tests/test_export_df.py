@@ -6,6 +6,7 @@ import lazypandas as lp
 import logging
 import glob
 import os
+from pathlib import Path
 
 
 class TestExportDf(unittest.TestCase):
@@ -32,6 +33,7 @@ class TestExportDf(unittest.TestCase):
         self.df = pd.DataFrame(np.random.randn(10, 3), columns=['A', 'B', 'C'],
                                index=pd.date_range('1/1/2000', periods=10))
         self.df.name = 'Sample df'
+        lp.path_in = './tests/file_output/'
         lp.path_out = './tests/file_output/'
 
         return
@@ -78,3 +80,10 @@ class TestExportDf(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+def test_invalid_path():
+    lp.path_out = 'not_a_valid_path'
+    path = Path(lp.path_out).is_dir()
+
+    assert (not path)
