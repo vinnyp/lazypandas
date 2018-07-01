@@ -3,6 +3,7 @@ import glob
 import os
 import pandas as pd
 import logging
+from pathlib import Path
 
 
 class Export(object):
@@ -24,6 +25,9 @@ class Export(object):
 
     @path_out.setter
     def path_out(self, value):
+        path = Path(value)
+        if not path.is_dir():
+            raise TypeError("Exception: Not a valid path")
         self._path_out = value
         return
 
@@ -33,11 +37,7 @@ class Export(object):
 
     @staticmethod
     def _file_exists(file_name):
-        file = glob.glob(os.path.join(file_name))
-        exists = False
-
-        if len(file) > 0:
-            exists = True
+        exists = Path(file_name).is_file()
 
         return exists
 
@@ -89,3 +89,47 @@ class Export(object):
             print('Exported: ' + buffer)
 
         return
+
+
+class Import(object):
+        _path_in = './'
+        _singleton = None
+
+        def __new__(cls, *args, **kwargs):
+            if not cls._singleton:
+                cls._singleton = super(Import, cls).__new__(cls, *args, **kwargs)
+                cls.logger = logging.getLogger(__name__)
+            return cls._singleton
+
+        @property
+        def path_in(self):
+            return self._path_in
+
+        @path_in.setter
+        def path_in(self, value):
+            path = Path(value)
+            if not path.is_dir():
+                raise TypeError("Exception: Not a valid path")
+            self._path_in = value
+            return
+
+        def import_df(self, file_name, *args, **kwargs):
+            df = None
+            all_files = glob.glob(os.path.join(self.path_in, "*.csv"))
+
+            if not all_files:
+                self.logger.info("Import directory is empty.")
+                raise IOError
+
+            all_files.sort()
+
+            try:
+                file = [y for y in all_files if file_name in y].pop()
+                df = pd.read_csv(file, low_memory=False, encoding='utf-8', *args, **kwargs)
+                self.logger.info("Imported file: " + file)
+                self.logger.info("Total rows: " + str(len(file)))
+            except IndexError as e:
+                self.logger.exception('No file found with that name.', e)
+                raise
+
+            return df
