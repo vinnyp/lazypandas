@@ -68,7 +68,7 @@ class Export(object):
 
         if trace:
             try:
-                buffer = self.path_out + self.timestamp_label + label + str(file_count + 1) + '.csv'
+                buffer = self.path_out + self.timestamp_label + label + str(file_count + 1).zfill(2) + '.csv'
                 df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
             except Exception as e:
                 self.logger.exception(self, "Exception: ", e)
