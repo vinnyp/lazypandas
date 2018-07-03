@@ -127,7 +127,8 @@ class Import(object):
                 file = [y for y in all_files if file_name in y].pop()
                 df = pd.read_csv(file, low_memory=False, encoding='utf-8', *args, **kwargs)
                 self.logger.info("Imported file: " + file)
-                self.logger.info("Total rows: " + str(len(file)))
+                self.logger.info("Total rows: " + str(len(df)))
+                self.logger.info(df.dtypes)
             except IndexError as e:
                 self.logger.exception('No file found with that name.', e)
                 raise
