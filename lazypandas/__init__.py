@@ -2,8 +2,10 @@
 
 from __future__ import absolute_import
 from . import io
-from .io import Export, Import
+from .actions import (split_and_fill)
 from .examine import (missing_summary, missing_values)
+from .io import Export, Import
+
 import logging
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())

@@ -1,13 +1,13 @@
 import unittest
 import pandas as pd
 import numpy as np
+import hackr
 import pytest
 import lazypandas as lp
 import logging
-from pathlib import Path
 
 
-class TestImportDf(unittest.TestCase):
+class TestActions(unittest.TestCase):
 
     def setUp(self):
 
@@ -28,31 +28,12 @@ class TestImportDf(unittest.TestCase):
         # add ch to logger
         logger.addHandler(ch)
 
-        self.df = pd.DataFrame(np.random.randn(10, 3), columns=['A', 'B', 'C'],
+        self.df = pd.DataFrame(data={'A': ['Watermelon', 'Cherry', 'Apple', 'Banana', np.nan, np.nan, np.nan,
+                                           'Blueberry', 'Strawberry', 'Grape'],
+                                     'B': [1, 2, 3, np.nan, 8, 2, 4, 1, 22, 1],
+                                     'C': ['Blue', 'Yellow', 'Green', 'Red', 'Magenta', 'Orange', 'Pink',
+                                           'Purple', np.nan, np.nan]}, columns=['A', 'B', 'C'],
                                index=pd.date_range('1/1/2000', periods=10))
         self.df.name = 'Sample df'
-        lp.path_in = './tests/file_output/'
-        lp.path_out = './tests/file_output/'
 
         return
-
-    def test_file_not_found(self):
-        with pytest.raises(IndexError):
-            lp.import_df('users.csv')
-
-    def test_file_imported(self):
-        lp.export_df(self.df, label='accounts', trace=False)
-        df = lp.import_df('accounts.csv')
-
-        assert len(df) > 0
-
-
-if __name__ == '__main__':
-    unittest.main()
-
-
-def test_invalid_path():
-    lp.path_in = 'not_a_valid_path'
-    path = Path(lp.path_in).is_dir()
-
-    assert (not path)

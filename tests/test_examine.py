@@ -6,7 +6,7 @@ import lazypandas as lp
 import logging
 
 
-class TestExportDf(unittest.TestCase):
+class TestExamine(unittest.TestCase):
 
     def setUp(self):
 
