@@ -28,6 +28,9 @@ def split_and_fill(
     n = int(eligible.sum())
     logger.debug("split_and_fill: backfilling %d rows", n)
 
+    if n and df[target].dtype != object:
+        df[target] = df[target].astype(object)
+
     df.loc[eligible, target] = df.loc[eligible, source].apply(
         lambda x: x.split(separator)[1] if separator in x else None
     )
