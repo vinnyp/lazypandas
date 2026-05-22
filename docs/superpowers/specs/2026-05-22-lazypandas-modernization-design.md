@@ -87,18 +87,32 @@ Organized by severity. Each finding has an ID used by the implementation plan.
 Chunks are not fully independent. The DAG:
 
 ```
-Wave 1 (parallel):
-  - chunk-bugs    (B1, B2, B3, B4, B6 — strict TDD)
-  - chunk-pkg     (P1, P2, P3, P4, P9 — pyproject migration + src layout)
-  - chunk-readme  (H1, H2, H4 — README + CHANGELOG + gitignore scope)
+Wave 1 (parallel) — LANDED:
+  - chunk-bugs    (B1, B2, B3, B4, B6 — strict TDD)            ✅ #4
+  - chunk-pkg     (P1, P2, P3, P4, P9 — pyproject + src/)      ✅ #6
+  - chunk-readme  (H1, H2, H4 — README + CHANGELOG + gitignore) ✅ #5
 
-Wave 2 (after wave 1 lands on master):
-  - chunk-tests   (T1, T2, T3, T4, T5, T6, T7 — pytest cleanup, assumes bugs fixed)
-  - chunk-ci      (P7 — Actions workflow; lands after pyproject so deps install)
-  - chunk-polish  (D1, D2, D3, D4, D5, D6, D7, D8, P5, P6, P8, H3, H5)
+Wave 2 (parallel where DAG allows):
+  - chunk-tests    (T1, T2, T3, T4, T5, T6, T7 — pytest cleanup)
+  - chunk-ci       (P7 — GitHub Actions matrix)
+  - chunk-polish   (D1-D8, P5, P6, P8, H3, H5, B5 doc, zfill counter)
+  - chunk-examine  (E1, E2 — port missing_summary + missing_values)
+  - chunk-actions  (A1 — port split_and_fill with TDD)
 ```
 
 `B5` (session-shared timestamp) is intentionally deferred: the behavior is depended on by current tests; revisit during `chunk-polish` and decide whether to document it as-is or change it (probably document — changing it is a public-API change).
+
+### Additional findings from `feature_describefunctions` (8-year-old branch, audited 2026-05-22)
+
+| ID | Source commit | Description |
+|---|---|---|
+| **E1** | `93faff7` | Port `missing_summary(df) -> Series` — per-column count of missing values. Modernize: type hints, fix broken `logger.exception("msg", e)` signature, return type clear. |
+| **E2** | `93faff7` | Port `missing_values(df, columns=None) -> int` — scalar count of nulls across df or column subset. Same modernization. |
+| **A1** | `70594ec` | Port `split_and_fill(df, source, target, separator) -> DataFrame` — backfills empty target column by splitting source on a separator. **WIP, no tests** in the original — write tests TDD-style before landing. |
+| (folded) | `93faff7` | `.zfill(2)` on trace counter → `iteration_01.csv` vs `iteration_1.csv`. Folded into `chunk-polish`. |
+| (skipped) | `93faff7` | `unique()` stub raising `NotImplementedError` — empty, dropped. |
+| (skipped) | `e4574dc` | `len(file)` → `len(df)` — duplicate of B1, already fixed. |
+| (skipped) | `e4574dc` | Extra `logger.info(df.dtypes)` per import — too noisy by default. |
 
 ### Per-chunk workflow
 
@@ -136,9 +150,10 @@ After all chunks land on `master`:
 
 ## Success criteria
 
-- All 10 existing tests pass (plus new tests added per T-section).
+- All 10 existing tests pass (plus new tests added per T-section, E-section, A-section).
 - `uv pip install -e .` installs cleanly using `pyproject.toml`.
 - `ruff check` passes; `mypy` passes (if D7 lands).
 - GitHub Actions CI green on at least py3.11 × pandas 3.x.
 - `README.md` renders correctly on GitHub with no broken badges.
 - All 6 bugs (B1–B6) have a regression test.
+- `missing_summary`, `missing_values`, and `split_and_fill` all have test coverage.

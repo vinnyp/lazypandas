@@ -4,11 +4,11 @@ Guidance for AI coding agents working in this repository.
 
 ## Project overview
 
-**lazypandas** — a small Python library of helper methods that wrap common pandas data-wrangling chores (timestamped CSV exports, simple CSV imports). Originally written in 2018; currently being modernized.
+**lazypandas** — a small Python library of helper methods that wrap common pandas data-wrangling chores (timestamped CSV exports, simple CSV imports, missing-value examination). Originally written in 2018; currently being modernized.
 
-Public API (re-exported from `lazypandas/__init__.py`):
+Public API (re-exported from `src/lazypandas/__init__.py`):
 
-- `lazypandas.import_df(file_name, *args, **kwargs)` — load a CSV from `path_in` by substring match on filename.
+- `lazypandas.import_df(file_name, *args, **kwargs)` — load a CSV from `path_in` by substring match on filename. Raises `ValueError` on ambiguous matches.
 - `lazypandas.export_df(df, label='', show_index=False, trace=True, *args, **kwargs)` — write a DataFrame to `path_out` with a session-shared timestamp prefix. `trace=True` appends a version counter; `trace=False` overwrites.
 - Module-level config: `lazypandas.path_in`, `lazypandas.path_out`, `lazypandas.timestamp_label`.
 
@@ -16,16 +16,19 @@ Public API (re-exported from `lazypandas/__init__.py`):
 
 ```
 lazypandas/
-├── lazypandas/
+├── src/lazypandas/
 │   ├── __init__.py        # Public surface + module-level wrappers
-│   └── io.py              # Export & Import classes (singletons)
+│   └── io.py              # Export & Import classes
 ├── tests/
+│   ├── conftest.py        # Session-scope test isolation
+│   ├── test_bugs.py       # Regression tests for B1-B6
 │   ├── test_export_df.py
 │   ├── test_import_df.py
-│   └── file_output/       # Test artifact dir (gitignored *.csv)
-├── setup.py               # Legacy packaging (modernization target)
-├── tox.ini                # py36 only (modernization target)
-├── README.rst             # Stub (modernization target)
+│   └── file_output/       # Test artifact dir (gitignored)
+├── docs/superpowers/      # Spec + plan for the modernization effort
+├── pyproject.toml         # PEP 621 packaging metadata
+├── README.md
+├── CHANGELOG.md
 └── LICENSE
 ```
 
@@ -36,17 +39,16 @@ Python is managed by **`uv`**. The project venv lives at `.venv/` and is created
 ```bash
 # One-time setup
 uv venv --python 3.11 .venv
-uv pip install -e . pytest
+uv pip install -e ".[dev]"   # installs pytest, pytest-cov
 
 # Run tests
-.venv/bin/pytest tests/ -v
+.venv/bin/pytest -v
 
 # Add a dep
 uv pip install <package>
 ```
 
-Current pinned deps (from `setup.py`, intentionally outdated):
-`pandas>=0.23.1`, `numpy>=1.14.3`. Modern versions (pandas 3.x, numpy 2.x) work — code is mostly compatible.
+Declared deps: `pandas>=2.2`, `numpy>=1.26`. Requires Python `>=3.10`.
 
 ## Conventions & guardrails
 
@@ -70,3 +72,4 @@ Current pinned deps (from `setup.py`, intentionally outdated):
 - Prefer `pathlib.Path` over string-concatenated paths.
 - Prefer pytest fixtures (`tmp_path`, `caplog`) over manual setup in tests.
 - Use `logging`, not `print`, in library code.
+- Conventional Commits (`fix:`, `feat:`, `chore:`, `refactor:`, `docs:`, `test:`, `build:`, `ci:`).
