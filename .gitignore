@@ -159,8 +159,8 @@ venv.bak/
 # pycharm
 .idea/
 
-# file export
-*.csv
+# file export — only ignore CSVs produced by tests, not all CSVs project-wide
+tests/file_output/*.csv
 
 # Claude Code local state, worktrees
 .claude/
