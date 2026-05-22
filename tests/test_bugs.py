@@ -68,3 +68,23 @@ def test_b4_export_df_works_without_trailing_slash(tmp_path):
     # File must land inside out_dir, not at out_dir's parent with a concat'd name.
     found = list(out_dir.glob("*noslash*.csv"))
     assert len(found) == 1, f"Expected exactly one csv inside {out_dir}, found {found}"
+
+
+def test_b6_import_df_raises_on_ambiguous_match(tmp_path):
+    """B6: silently popping last of multiple matches is dangerous."""
+    lp.path_in = str(tmp_path)
+    lp.path_out = str(tmp_path)
+    df = _sample_df()
+    lp.export_df(df, label="report_v1", trace=False)
+    lp.export_df(df, label="report_v2", trace=False)
+
+    with pytest.raises(ValueError, match="ambiguous"):
+        lp.import_df("report")  # matches both
+
+
+def test_b6_import_df_single_match_still_works(tmp_path):
+    lp.path_in = str(tmp_path)
+    lp.path_out = str(tmp_path)
+    lp.export_df(_sample_df(), label="unique_label", trace=False)
+    df = lp.import_df("unique_label.csv")
+    assert len(df) == 5

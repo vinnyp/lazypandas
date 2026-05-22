@@ -126,11 +126,18 @@ class Import(object):
             all_files.sort()
 
             try:
-                file = [y for y in all_files if file_name in y].pop()
+                matches = [y for y in all_files if file_name in y]
+                if not matches:
+                    raise IndexError(f"No file matching {file_name!r} in {self.path_in}")
+                if len(matches) > 1:
+                    raise ValueError(
+                        f"ambiguous match for {file_name!r}: found {len(matches)} files: {matches}"
+                    )
+                file = matches[0]
                 df = pd.read_csv(file, low_memory=False, encoding='utf-8', *args, **kwargs)
                 self.logger.info("Imported file: " + file)
                 self.logger.info("Total rows: %d", len(df))
-            except IndexError as e:
+            except IndexError:
                 self.logger.exception('No file found with that name.')
                 raise
 
