@@ -59,7 +59,7 @@ class Export(object):
         if not isinstance(trace, bool):
             raise TypeError('Expected type bool, not ' + str(type(trace)))
 
-        all_files = glob.glob(os.path.join(self.path_out, self.timestamp_label + label + '*.csv'))
+        all_files = glob.glob(str(Path(self.path_out) / f"{self.timestamp_label}{label}*.csv"))
 
         file_count = len(all_files)
         self.logger.info("Previous versions found: %s", file_count)
@@ -68,7 +68,7 @@ class Export(object):
 
         if trace:
             try:
-                buffer = self.path_out + self.timestamp_label + label + str(file_count + 1) + '.csv'
+                buffer = str(Path(self.path_out) / f"{self.timestamp_label}{label}{file_count + 1}.csv")
                 df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
             except Exception:
                 self.logger.exception("Error writing CSV")
@@ -76,7 +76,7 @@ class Export(object):
 
         elif not trace:
             try:
-                buffer = self.path_out + self.timestamp_label + label + '.csv'
+                buffer = str(Path(self.path_out) / f"{self.timestamp_label}{label}.csv")
                 df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
             except Exception:
                 self.logger.exception("Error writing CSV")

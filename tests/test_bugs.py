@@ -53,3 +53,18 @@ def test_b1_import_df_logs_correct_row_count(tmp_path, caplog):
 
     # Must log "Total rows: 5", not the length of the file path string.
     assert any("Total rows: 5" in rec.getMessage() for rec in caplog.records)
+
+
+def test_b4_export_df_works_without_trailing_slash(tmp_path):
+    """B4: string-concatenated paths break when path_out lacks a trailing slash."""
+    out_dir = tmp_path / "out"
+    out_dir.mkdir()
+    # Set path_out WITHOUT a trailing slash on purpose.
+    lp.path_out = str(out_dir)
+    lp.path_in = str(out_dir)
+
+    lp.export_df(_sample_df(), label="noslash", trace=False)
+
+    # File must land inside out_dir, not at out_dir's parent with a concat'd name.
+    found = list(out_dir.glob("*noslash*.csv"))
+    assert len(found) == 1, f"Expected exactly one csv inside {out_dir}, found {found}"
