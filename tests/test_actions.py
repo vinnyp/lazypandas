@@ -49,3 +49,20 @@ def test_split_and_fill_returns_dataframe():
     df = pd.DataFrame({"source": ["x:y"], "target": [np.nan]})
     result = lp.split_and_fill(df, source="source", target="target", separator=":")
     assert isinstance(result, pd.DataFrame)
+
+
+def test_split_and_fill_handles_non_string_source_gracefully():
+    """Non-string eligible source values must not crash the call."""
+    df = pd.DataFrame({
+        "source": ["foo:bar", 42, "baz:qux"],
+        "target": [np.nan, np.nan, np.nan],
+    })
+    result = lp.split_and_fill(df.copy(), source="source", target="target", separator=":")
+    # String rows still split.
+    assert result.loc[0, "source"] == "foo"
+    assert result.loc[0, "target"] == "bar"
+    assert result.loc[2, "source"] == "baz"
+    assert result.loc[2, "target"] == "qux"
+    # Non-string source left untouched; target stays NaN.
+    assert result.loc[1, "source"] == 42
+    assert pd.isna(result.loc[1, "target"])

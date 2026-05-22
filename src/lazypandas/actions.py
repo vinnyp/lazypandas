@@ -32,10 +32,10 @@ def split_and_fill(
         df[target] = df[target].astype(object)
 
     df.loc[eligible, target] = df.loc[eligible, source].apply(
-        lambda x: x.split(separator)[1] if separator in x else None
+        lambda x: x.split(separator)[1] if isinstance(x, str) and separator in x else None
     )
     df.loc[eligible, source] = df.loc[eligible, source].apply(
-        lambda x: x.split(separator)[0]
+        lambda x: x.split(separator)[0] if isinstance(x, str) else x
     )
 
     return df
