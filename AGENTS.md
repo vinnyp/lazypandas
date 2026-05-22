@@ -8,25 +8,32 @@ Guidance for AI coding agents working in this repository.
 
 Public API (re-exported from `src/lazypandas/__init__.py`):
 
-- `lazypandas.import_df(file_name, *args, **kwargs)` — load a CSV from `path_in` by substring match on filename. Raises `ValueError` on ambiguous matches.
-- `lazypandas.export_df(df, label='', show_index=False, trace=True, *args, **kwargs)` — write a DataFrame to `path_out` with a session-shared timestamp prefix. `trace=True` appends a version counter; `trace=False` overwrites.
-- Module-level config: `lazypandas.path_in`, `lazypandas.path_out`, `lazypandas.timestamp_label`.
+- `lazypandas.import_df(file_name, *args, **kwargs)` — load a CSV from `state.path_in` by substring match on filename. Raises `ValueError` on ambiguous matches.
+- `lazypandas.export_df(df, label='', show_index=False, trace=True, *args, **kwargs)` — write a DataFrame to `state.path_out` with a session-shared timestamp prefix. `trace=True` appends a zero-padded version counter; `trace=False` overwrites.
+- `lazypandas.export_df_versioned(df, ...)` / `lazypandas.export_df_overwrite(df, ...)` — clearer wrappers around the two `trace` modes.
+- `lazypandas.missing_summary(df) -> Series` / `lazypandas.missing_values(df, columns=None) -> int` — missing-value examination.
+- `lazypandas.split_and_fill(df, source, target, separator) -> DataFrame` — backfill empty target column from source split.
+- Module-level config: `lazypandas.state.path_in`, `lazypandas.state.path_out`, `lazypandas.state.timestamp_label`.
 
 ## Layout
 
 ```
 lazypandas/
 ├── src/lazypandas/
-│   ├── __init__.py        # Public surface + module-level wrappers
-│   └── io.py              # Export & Import classes
+│   ├── __init__.py        # Public surface
+│   ├── io.py              # import_df, export_df, export_df_*, state
+│   ├── examine.py         # missing_summary, missing_values
+│   └── actions.py         # split_and_fill
 ├── tests/
-│   ├── conftest.py        # Session-scope test isolation
 │   ├── test_bugs.py       # Regression tests for B1-B6
 │   ├── test_export_df.py
 │   ├── test_import_df.py
-│   └── file_output/       # Test artifact dir (gitignored)
+│   ├── test_examine.py
+│   └── test_actions.py
+├── .github/workflows/ci.yml  # Matrix CI: py 3.10-3.13 × pandas 2.x/3.x
 ├── docs/superpowers/      # Spec + plan for the modernization effort
-├── pyproject.toml         # PEP 621 packaging metadata
+├── pyproject.toml         # PEP 621 packaging + ruff/mypy config
+├── .pre-commit-config.yaml
 ├── README.md
 ├── CHANGELOG.md
 └── LICENSE
