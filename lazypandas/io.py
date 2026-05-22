@@ -70,15 +70,17 @@ class Export(object):
             try:
                 buffer = self.path_out + self.timestamp_label + label + str(file_count + 1) + '.csv'
                 df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
-            except Exception as e:
-                self.logger.exception(self, "Exception: ", e)
+            except Exception:
+                self.logger.exception("Error writing CSV")
+                raise
 
         elif not trace:
             try:
                 buffer = self.path_out + self.timestamp_label + label + '.csv'
                 df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
-            except Exception as e:
-                self.logger.exception(self, "Exception: ", e)
+            except Exception:
+                self.logger.exception("Error writing CSV")
+                raise
 
         file_exists = self._file_exists(buffer)
 

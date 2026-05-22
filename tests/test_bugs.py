@@ -19,3 +19,20 @@ def test_b2_import_df_missing_file_raises_indexerror(tmp_path):
 
     with pytest.raises(IndexError):
         lp.import_df("not_a_real_file.csv")
+
+
+def test_b3_export_df_handles_exception_correctly(tmp_path, monkeypatch):
+    """B3: logger.exception(self, ...) crashes when the export path is unwritable."""
+    lp.path_in = str(tmp_path)
+    lp.path_out = str(tmp_path)
+
+    # Force pandas.to_csv to raise so the except branch is exercised
+    import pandas as pd
+    def boom(*args, **kwargs):
+        raise OSError("disk on fire")
+    monkeypatch.setattr(pd.DataFrame, "to_csv", boom)
+
+    # Today this raises TypeError from the broken logger.exception(self, ...) call,
+    # masking the IOError("Exported file not found.") that the function intends.
+    with pytest.raises((OSError, IOError)):
+        lp.export_df(_sample_df(), label="boomtest", trace=False)
