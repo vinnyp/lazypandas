@@ -161,3 +161,6 @@ venv.bak/
 
 # file export
 *.csv
+
+# Claude Code local state, worktrees
+.claude/

@@ -59,7 +59,7 @@ class Export(object):
         if not isinstance(trace, bool):
             raise TypeError('Expected type bool, not ' + str(type(trace)))
 
-        all_files = glob.glob(os.path.join(self.path_out, self.timestamp_label + label + '*.csv'))
+        all_files = glob.glob(str(Path(self.path_out) / f"{self.timestamp_label}{label}*.csv"))
 
         file_count = len(all_files)
         self.logger.info("Previous versions found: %s", file_count)
@@ -68,17 +68,19 @@ class Export(object):
 
         if trace:
             try:
-                buffer = self.path_out + self.timestamp_label + label + str(file_count + 1) + '.csv'
+                buffer = str(Path(self.path_out) / f"{self.timestamp_label}{label}{file_count + 1}.csv")
                 df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
-            except Exception as e:
-                self.logger.exception(self, "Exception: ", e)
+            except Exception:
+                self.logger.exception("Error writing CSV")
+                raise
 
         elif not trace:
             try:
-                buffer = self.path_out + self.timestamp_label + label + '.csv'
+                buffer = str(Path(self.path_out) / f"{self.timestamp_label}{label}.csv")
                 df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
-            except Exception as e:
-                self.logger.exception(self, "Exception: ", e)
+            except Exception:
+                self.logger.exception("Error writing CSV")
+                raise
 
         file_exists = self._file_exists(buffer)
 
@@ -124,12 +126,19 @@ class Import(object):
             all_files.sort()
 
             try:
-                file = [y for y in all_files if file_name in y].pop()
+                matches = [y for y in all_files if file_name in y]
+                if not matches:
+                    raise IndexError(f"No file matching {file_name!r} in {self.path_in}")
+                if len(matches) > 1:
+                    raise ValueError(
+                        f"ambiguous match for {file_name!r}: found {len(matches)} files: {matches}"
+                    )
+                file = matches[0]
                 df = pd.read_csv(file, low_memory=False, encoding='utf-8', *args, **kwargs)
                 self.logger.info("Imported file: " + file)
-                self.logger.info("Total rows: " + str(len(file)))
-            except IndexError as e:
-                self.logger.exception('No file found with that name.', e)
+                self.logger.info("Total rows: %d", len(df))
+            except IndexError:
+                self.logger.exception('No file found with that name.')
                 raise
 
             return df
