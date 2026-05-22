@@ -129,7 +129,7 @@ class Import(object):
                 self.logger.info("Imported file: " + file)
                 self.logger.info("Total rows: " + str(len(file)))
             except IndexError as e:
-                self.logger.exception('No file found with that name.', e)
+                self.logger.exception('No file found with that name.')
                 raise
 
             return df
