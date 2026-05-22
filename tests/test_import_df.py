@@ -1,58 +1,51 @@
-import unittest
-import pandas as pd
 import numpy as np
+import pandas as pd
 import pytest
+from pandas.testing import assert_frame_equal
+
 import lazypandas as lp
-import logging
-from pathlib import Path
 
 
-class TestExportDf(unittest.TestCase):
-
-    def setUp(self):
-
-        # create the Logger
-        logger = logging.getLogger()
-        logger.setLevel(logging.DEBUG)
-
-        # create console handler and set level to debug
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-
-        # create formatter
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-        # add formatter to ch
-        ch.setFormatter(formatter)
-
-        # add ch to logger
-        logger.addHandler(ch)
-
-        self.df = pd.DataFrame(np.random.randn(10, 3), columns=['A', 'B', 'C'],
-                               index=pd.date_range('1/1/2000', periods=10))
-        self.df.name = 'Sample df'
-        lp.path_in = './tests/file_output/'
-        lp.path_out = './tests/file_output/'
-
-        return
-
-    def test_file_not_found(self):
-        with pytest.raises(IndexError):
-            lp.import_df('users.csv')
-
-    def test_file_imported(self):
-        lp.export_df(self.df, label='accounts', trace=False)
-        df = lp.import_df('accounts.csv')
-
-        assert len(df) > 0
+@pytest.fixture
+def sample_df():
+    return pd.DataFrame(
+        np.random.randn(10, 3),
+        columns=["A", "B", "C"],
+        index=pd.date_range("1/1/2000", periods=10),
+    )
 
 
-if __name__ == '__main__':
-    unittest.main()
+@pytest.fixture
+def io_dir(tmp_path):
+    lp.path_in = str(tmp_path)
+    lp.path_out = str(tmp_path)
+    return tmp_path
+
+
+def test_file_not_found(io_dir, sample_df):
+    lp.export_df(sample_df, label="seed", trace=False)
+    with pytest.raises(IndexError):
+        lp.import_df("users.csv")
+
+
+def test_file_imported(sample_df, io_dir):
+    lp.export_df(sample_df, label="accounts", trace=False)
+    df = lp.import_df("accounts.csv")
+    assert len(df) == 10
+
+
+def test_file_imported_contents_match(sample_df, io_dir):
+    """T5: round-trip assertion using assert_frame_equal."""
+    lp.export_df(sample_df, label="roundtrip", trace=False, show_index=True)
+    df = lp.import_df("roundtrip.csv")
+    assert_frame_equal(
+        df.iloc[:, 1:].reset_index(drop=True),
+        sample_df.reset_index(drop=True),
+        check_dtype=False,
+    )
 
 
 def test_invalid_path():
-    lp.path_in = 'not_a_valid_path'
-    path = Path(lp.path_in).is_dir()
-
-    assert (not path)
+    lp.path_in = "not_a_valid_path"
+    with pytest.raises((FileNotFoundError, NotADirectoryError, OSError, IOError, TypeError, ValueError, IndexError)):
+        lp.import_df("missing.csv")

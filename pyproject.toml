@@ -39,4 +39,8 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra"
+addopts = "-ra --cov=lazypandas --cov-report=term-missing"
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
