@@ -1404,6 +1404,305 @@ Expected: all hooks pass (after fixing any reported issues).
 
 ---
 
+## Chunk-examine: port missing_summary + missing_values from feature_describefunctions
+
+**Branch:** `chunk/examine`
+**Files:**
+- Create: `src/lazypandas/examine.py`
+- Create: `tests/test_examine.py`
+- Modify: `src/lazypandas/__init__.py` — export new functions
+
+**Source material:** Original implementation lives at `origin/feature_describefunctions~2` (`lazypandas/examine.py`). Has known issues (broken `logger.exception("msg", e)` signature; no type hints; `unique()` stub). Modernize during port.
+
+### Task 1: Write failing tests
+
+- [ ] **Step 1: Create `tests/test_examine.py` with pytest-style tests**
+
+```python
+# tests/test_examine.py
+import numpy as np
+import pandas as pd
+import pytest
+
+import lazypandas as lp
+
+
+@pytest.fixture
+def sample_df():
+    return pd.DataFrame(
+        data={
+            "A": ["Watermelon", "Cherry", "Apple", "Banana", np.nan, np.nan, np.nan,
+                  "Blueberry", "Strawberry", "Grape"],
+            "B": [1, 2, 3, np.nan, 8, 2, 4, 1, 22, 1],
+            "C": ["Blue", "Yellow", "Green", "Red", "Magenta", "Orange", "Pink",
+                  "Purple", np.nan, np.nan],
+        },
+        columns=["A", "B", "C"],
+        index=pd.date_range("1/1/2000", periods=10),
+    )
+
+
+def test_missing_summary_returns_per_column_counts(sample_df):
+    summary = lp.missing_summary(sample_df)
+    assert isinstance(summary, pd.Series)
+    assert summary["A"] == 3
+    assert summary["B"] == 1
+    assert summary["C"] == 2
+
+
+def test_missing_summary_type_error_on_non_dataframe():
+    with pytest.raises(TypeError):
+        lp.missing_summary("not a df")
+
+
+def test_missing_values_total_count(sample_df):
+    assert lp.missing_values(sample_df) == 6
+
+
+def test_missing_values_single_column(sample_df):
+    assert lp.missing_values(sample_df, columns=["A"]) == 3
+
+
+def test_missing_values_multi_column(sample_df):
+    assert lp.missing_values(sample_df, columns=["A", "B"]) == 4
+    assert lp.missing_values(sample_df, columns=["A", "B", "C"]) == 6
+
+
+def test_missing_values_type_error_on_non_dataframe():
+    with pytest.raises(TypeError):
+        lp.missing_values("not a df")
+
+
+def test_missing_values_bad_column(sample_df):
+    with pytest.raises(KeyError):
+        lp.missing_values(sample_df, columns=["nope"])
+```
+
+- [ ] **Step 2: Run to verify it fails (functions don't exist yet)**
+
+```bash
+.venv/bin/pytest tests/test_examine.py -v
+```
+Expected: ImportError / AttributeError on `lp.missing_summary` / `lp.missing_values`.
+
+### Task 2: Implement `examine.py` (modernized)
+
+- [ ] **Step 1: Create `src/lazypandas/examine.py`**
+
+```python
+"""Examine pandas DataFrames for missing values."""
+from __future__ import annotations
+
+import logging
+from typing import Iterable
+
+import numpy as np
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+
+def missing_summary(df: pd.DataFrame) -> pd.Series:
+    """Per-column count of missing (NaN) values."""
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"Expected DataFrame, got {type(df).__name__}")
+    num_missing = df.isnull().sum()
+    logger.info("Missing-value summary: %s", num_missing.to_dict())
+    return num_missing
+
+
+def missing_values(df: pd.DataFrame, columns: Iterable[str] | None = None) -> int:
+    """Total count of missing values across df, or a column subset."""
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"Expected DataFrame, got {type(df).__name__}")
+    target = df if columns is None else df[list(columns)]
+    return int(np.count_nonzero(target.isnull()))
+```
+
+### Task 3: Export from `__init__.py`
+
+- [ ] **Step 1: Modify `src/lazypandas/__init__.py`**
+
+```python
+# Add to existing imports:
+from .examine import missing_summary, missing_values
+```
+And add to `__all__` (if populated post-chunk-polish): `"missing_summary"`, `"missing_values"`.
+
+### Task 4: Run tests + commit
+
+- [ ] **Step 1:** `.venv/bin/pytest tests/test_examine.py -v` — all PASS.
+- [ ] **Step 2:** `.venv/bin/pytest -v` — full suite green (no regressions).
+- [ ] **Step 3:** Commit
+
+```bash
+git add src/lazypandas/examine.py src/lazypandas/__init__.py tests/test_examine.py
+git commit -m "feat(examine): add missing_summary and missing_values (E1, E2)
+
+Ports from the 2018 feature_describefunctions branch. Modernized with
+type hints, fixed logger.exception signature, and pytest-style tests.
+The original unique() stub is intentionally dropped."
+```
+
+### Task 5: Review + land
+
+- [ ] **Step 1:** Invoke `superpowers:requesting-code-review`. Reviewer: **Claude** (alternation: codex implements → Claude reviews).
+- [ ] **Step 2:** Address review.
+- [ ] **Step 3:** Confirm → push → PR `feat: add missing_summary and missing_values from feature_describefunctions` → squash-merge.
+
+---
+
+## Chunk-actions: port split_and_fill from feature_describefunctions (TDD)
+
+**Branch:** `chunk/actions`
+**Files:**
+- Create: `src/lazypandas/actions.py`
+- Create: `tests/test_actions.py`
+- Modify: `src/lazypandas/__init__.py` — export `split_and_fill`
+
+**Source material:** Original implementation lives at `origin/feature_describefunctions` (`lazypandas/actions.py`). Marked WIP in 2019, **never had tests**. Must write tests first (TDD) to pin behavior.
+
+### Task 1: Write failing tests (TDD — define behavior)
+
+- [ ] **Step 1: Create `tests/test_actions.py`**
+
+```python
+# tests/test_actions.py
+import numpy as np
+import pandas as pd
+import pytest
+
+import lazypandas as lp
+
+
+def test_split_and_fill_backfills_target_from_source_split():
+    """When target is NaN and source has 'A:B', split on ':' and put 'B' into target, 'A' back into source."""
+    df = pd.DataFrame({
+        "source": ["foo:bar", "baz:qux", "lone"],
+        "target": [np.nan, np.nan, "preserved"],
+    })
+    result = lp.split_and_fill(df.copy(), source="source", target="target", separator=":")
+
+    # Row 0: target gets "bar", source becomes "foo"
+    assert result.loc[0, "source"] == "foo"
+    assert result.loc[0, "target"] == "bar"
+    # Row 1: target gets "qux", source becomes "baz"
+    assert result.loc[1, "source"] == "baz"
+    assert result.loc[1, "target"] == "qux"
+    # Row 2: target already non-null, source must remain untouched (no separator in it)
+    assert result.loc[2, "source"] == "lone"
+    assert result.loc[2, "target"] == "preserved"
+
+
+def test_split_and_fill_skips_rows_with_filled_target():
+    df = pd.DataFrame({
+        "source": ["foo:bar"],
+        "target": ["already_set"],
+    })
+    result = lp.split_and_fill(df.copy(), source="source", target="target", separator=":")
+    assert result.loc[0, "source"] == "foo:bar"  # unchanged
+    assert result.loc[0, "target"] == "already_set"
+
+
+def test_split_and_fill_skips_rows_with_null_source():
+    df = pd.DataFrame({
+        "source": [np.nan],
+        "target": [np.nan],
+    })
+    result = lp.split_and_fill(df.copy(), source="source", target="target", separator=":")
+    assert pd.isna(result.loc[0, "source"])
+    assert pd.isna(result.loc[0, "target"])
+
+
+def test_split_and_fill_returns_dataframe():
+    df = pd.DataFrame({"source": ["x:y"], "target": [np.nan]})
+    result = lp.split_and_fill(df, source="source", target="target", separator=":")
+    assert isinstance(result, pd.DataFrame)
+```
+
+- [ ] **Step 2: Run, expect fail**
+
+```bash
+.venv/bin/pytest tests/test_actions.py -v
+```
+Expected: ImportError on `lp.split_and_fill`.
+
+### Task 2: Implement `actions.py` (modernized port)
+
+- [ ] **Step 1: Create `src/lazypandas/actions.py`**
+
+```python
+"""Data-cleaning actions on DataFrames."""
+from __future__ import annotations
+
+import logging
+
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+
+def split_and_fill(
+    df: pd.DataFrame,
+    source: str,
+    target: str,
+    separator: str,
+) -> pd.DataFrame:
+    """Backfill empty target column by splitting source on separator.
+
+    For rows where ``target`` is NaN and ``source`` is non-null, splits
+    ``source`` on ``separator`` and puts the second part into ``target``
+    while keeping the first part in ``source``. Rows where target is
+    already populated, or source is null, are left untouched.
+    """
+    null_target = df[target].isnull()
+    populated_source = df[source].notnull()
+    eligible = null_target & populated_source
+
+    n = int(eligible.sum())
+    logger.debug("split_and_fill: backfilling %d rows", n)
+
+    df.loc[eligible, target] = df.loc[eligible, source].apply(
+        lambda x: x.split(separator)[1] if separator in x else None
+    )
+    df.loc[eligible, source] = df.loc[eligible, source].apply(
+        lambda x: x.split(separator)[0]
+    )
+
+    return df
+```
+
+### Task 3: Export + commit
+
+- [ ] **Step 1: Modify `src/lazypandas/__init__.py`**
+
+```python
+from .actions import split_and_fill
+```
+Add `"split_and_fill"` to `__all__` if populated.
+
+- [ ] **Step 2:** `.venv/bin/pytest tests/test_actions.py -v` — PASS.
+- [ ] **Step 3:** `.venv/bin/pytest -v` — full suite green.
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/lazypandas/actions.py src/lazypandas/__init__.py tests/test_actions.py
+git commit -m "feat(actions): add split_and_fill from feature_describefunctions WIP (A1)
+
+Ports the never-merged WIP commit (70594ec, 2019) with TDD-defined
+behavior: rows where target is NaN and source is non-null get the
+post-separator chunk placed in target, while source keeps the pre-
+separator chunk. Other rows untouched."
+```
+
+### Task 4: Review + land
+
+- [ ] **Step 1:** Invoke `superpowers:requesting-code-review`. Reviewer: **codex** (alternation: Claude implements → codex reviews).
+- [ ] **Step 2:** Address review.
+- [ ] **Step 3:** Confirm → push → PR `feat: add split_and_fill from feature_describefunctions WIP` → squash-merge.
+
+---
+
 # Final pass
 
 ## Task: integration review across master
@@ -1434,6 +1733,8 @@ git push origin v0.2.0
 - Tests T1–T7: covered in chunk-tests.
 - Packaging P1–P9: P1/P2/P3/P4/P9 in chunk-pkg, P5/P6/P8 in chunk-polish, P7 in chunk-ci.
 - Hygiene H1–H5: H1/H2/H4 in chunk-readme, H3 in chunk-tests, H5 in chunk-polish Task 4.
+- Examine E1, E2: covered in chunk-examine (port from feature_describefunctions).
+- Actions A1: covered in chunk-actions (TDD port of WIP code).
 
 **Placeholder scan:** No "TBD", "TODO", or "add error handling" stubs. All code shown inline. The one judgment-call note (chunk-polish Task 6 Step 3 about module `__setattr__`) is explicit about the recommendation.
 
