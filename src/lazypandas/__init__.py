@@ -4,6 +4,7 @@ from __future__ import absolute_import
 from . import io
 from .examine import missing_summary, missing_values
 from .io import Export, Import
+from .actions import split_and_fill
 import logging
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
