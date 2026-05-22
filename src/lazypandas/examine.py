@@ -1,8 +1,9 @@
 """Examine pandas DataFrames for missing values."""
+
 from __future__ import annotations
 
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 import numpy as np
 import pandas as pd
@@ -14,7 +15,7 @@ def missing_summary(df: pd.DataFrame) -> pd.Series:
     """Per-column count of missing (NaN) values."""
     if not isinstance(df, pd.DataFrame):
         raise TypeError(f"Expected DataFrame, got {type(df).__name__}")
-    num_missing = df.isnull().sum()
+    num_missing: pd.Series = df.isnull().sum()
     logger.info("Missing-value summary: %s", num_missing.to_dict())
     return num_missing
 

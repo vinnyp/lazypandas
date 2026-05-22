@@ -18,11 +18,11 @@ import pandas as pd
 
 df = pd.DataFrame({"a": [1, 2, 3]})
 
-lp.path_out = "./exports/"
+lp.state.path_out = "./exports/"
 lp.export_df(df, label="snapshot")              # trace=True (default): versioned filenames
 lp.export_df(df, label="snapshot", trace=False) # overwrite single file
 
-lp.path_in = "./exports/"
+lp.state.path_in = "./exports/"
 df_loaded = lp.import_df("snapshot")            # substring match
 ```
 
@@ -35,9 +35,11 @@ df_loaded = lp.import_df("snapshot")            # substring match
 
 | Name | Default | Purpose |
 |---|---|---|
-| `lazypandas.path_in` | `'./'` | Directory `import_df` reads from. |
-| `lazypandas.path_out` | `'./'` | Directory `export_df` writes to. |
-| `lazypandas.timestamp_label` | computed at import time | Prefix applied to all exports in a session. |
+| `lazypandas.state.path_in` | `'./'` | Directory `import_df` reads from. |
+| `lazypandas.state.path_out` | `'./'` | Directory `export_df` writes to. |
+| `lazypandas.state.timestamp_label` | computed at import time | Prefix applied to all exports in a session. |
+
+`timestamp_label` is session-shared: it is computed once when `lazypandas` is imported and reused for every export. Reassign `lp.state.timestamp_label` if you want to rotate the prefix without restarting Python.
 
 ## Requirements
 

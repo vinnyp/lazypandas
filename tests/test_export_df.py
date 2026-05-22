@@ -18,8 +18,8 @@ def sample_df():
 
 @pytest.fixture
 def io_dir(tmp_path):
-    lp.path_in = str(tmp_path)
-    lp.path_out = str(tmp_path)
+    lp.state.path_in = str(tmp_path)
+    lp.state.path_out = str(tmp_path)
     return tmp_path
 
 
@@ -46,18 +46,17 @@ def test_typeerror_input_trace(sample_df, io_dir):
 def test_final_exported(sample_df, io_dir):
     label = "random_numbers"
     lp.export_df(sample_df, label=label, trace=False)
-    expected = io_dir / f"{lp.timestamp_label}{label}.csv"
+    expected = io_dir / f"{lp.state.timestamp_label}{label}.csv"
     assert expected.is_file()
 
 
 def test_trace_exported(sample_df, io_dir):
     for _ in range(4):
         lp.export_df(sample_df)
-    all_files = glob.glob(str(io_dir / f"{lp.timestamp_label}iteration_*.csv"))
+    all_files = glob.glob(str(io_dir / f"{lp.state.timestamp_label}iteration_*.csv"))
     assert len(all_files) == 4
 
 
-def test_invalid_path(sample_df):
-    lp.path_out = "not_a_valid_path"
-    with pytest.raises((FileNotFoundError, NotADirectoryError, OSError, IOError, TypeError, ValueError)):
-        lp.export_df(sample_df, label="badpath", trace=False)
+def test_invalid_path():
+    with pytest.raises(NotADirectoryError):
+        lp.state.path_out = "not_a_valid_path"

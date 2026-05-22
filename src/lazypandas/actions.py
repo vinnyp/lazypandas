@@ -1,4 +1,5 @@
 """Data-cleaning actions on DataFrames."""
+
 from __future__ import annotations
 
 import logging

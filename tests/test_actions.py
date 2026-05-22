@@ -1,17 +1,18 @@
 # tests/test_actions.py
 import numpy as np
 import pandas as pd
-import pytest
 
 import lazypandas as lp
 
 
 def test_split_and_fill_backfills_target_from_source_split():
     """When target is NaN and source has 'A:B', split on ':' and put 'B' into target, 'A' back into source."""
-    df = pd.DataFrame({
-        "source": ["foo:bar", "baz:qux", "lone"],
-        "target": [np.nan, np.nan, "preserved"],
-    })
+    df = pd.DataFrame(
+        {
+            "source": ["foo:bar", "baz:qux", "lone"],
+            "target": [np.nan, np.nan, "preserved"],
+        }
+    )
     result = lp.split_and_fill(df.copy(), source="source", target="target", separator=":")
 
     # Row 0: target gets "bar", source becomes "foo"
@@ -26,20 +27,24 @@ def test_split_and_fill_backfills_target_from_source_split():
 
 
 def test_split_and_fill_skips_rows_with_filled_target():
-    df = pd.DataFrame({
-        "source": ["foo:bar"],
-        "target": ["already_set"],
-    })
+    df = pd.DataFrame(
+        {
+            "source": ["foo:bar"],
+            "target": ["already_set"],
+        }
+    )
     result = lp.split_and_fill(df.copy(), source="source", target="target", separator=":")
     assert result.loc[0, "source"] == "foo:bar"  # unchanged
     assert result.loc[0, "target"] == "already_set"
 
 
 def test_split_and_fill_skips_rows_with_null_source():
-    df = pd.DataFrame({
-        "source": [np.nan],
-        "target": [np.nan],
-    })
+    df = pd.DataFrame(
+        {
+            "source": [np.nan],
+            "target": [np.nan],
+        }
+    )
     result = lp.split_and_fill(df.copy(), source="source", target="target", separator=":")
     assert pd.isna(result.loc[0, "source"])
     assert pd.isna(result.loc[0, "target"])
@@ -53,10 +58,12 @@ def test_split_and_fill_returns_dataframe():
 
 def test_split_and_fill_handles_non_string_source_gracefully():
     """Non-string eligible source values must not crash the call."""
-    df = pd.DataFrame({
-        "source": ["foo:bar", 42, "baz:qux"],
-        "target": [np.nan, np.nan, np.nan],
-    })
+    df = pd.DataFrame(
+        {
+            "source": ["foo:bar", 42, "baz:qux"],
+            "target": [np.nan, np.nan, np.nan],
+        }
+    )
     result = lp.split_and_fill(df.copy(), source="source", target="target", separator=":")
     # String rows still split.
     assert result.loc[0, "source"] == "foo"

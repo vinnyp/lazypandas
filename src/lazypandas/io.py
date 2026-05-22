@@ -1,144 +1,141 @@
 import datetime
 import glob
-import os
-import pandas as pd
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, cast
+
+import pandas as pd
+
+logger = logging.getLogger(__name__)
+
+_TIMESTAMP_FORMAT = "%Y%m%d-%H%M%S-"
 
 
-class Export(object):
-    _timestamp_format = "%Y%m%d-%H%M%S-"
-    _timestamp_now = datetime.datetime.today()
-    _timestamp_label = _timestamp_now.strftime(_timestamp_format)
-    _path_out = './'
-    _singleton = None
+def _validate_dir(value: str) -> str:
+    if not Path(value).is_dir():
+        raise NotADirectoryError(f"Not a valid directory: {value!r}")
+    return value
 
-    def __new__(cls, *args, **kwargs):
-        if not cls._singleton:
-            cls._singleton = super(Export, cls).__new__(cls, *args, **kwargs)
-            cls.logger = logging.getLogger(__name__)
-        return cls._singleton
+
+@dataclass
+class _State:
+    _path_in: str = "./"
+    _path_out: str = "./"
+    # NOTE: timestamp_label is computed once per import session and reused.
+    # To rotate it manually in a running process, reassign lp.state.timestamp_label.
+    timestamp_label: str = field(
+        default_factory=lambda: datetime.datetime.now().strftime(_TIMESTAMP_FORMAT)
+    )
 
     @property
-    def path_out(self):
+    def path_in(self) -> str:
+        return self._path_in
+
+    @path_in.setter
+    def path_in(self, value: str) -> None:
+        self._path_in = _validate_dir(value)
+
+    @property
+    def path_out(self) -> str:
         return self._path_out
 
     @path_out.setter
-    def path_out(self, value):
-        path = Path(value)
-        if not path.is_dir():
-            raise TypeError("Exception: Not a valid path")
-        self._path_out = value
-        return
-
-    @property
-    def timestamp_label(self):
-        return self._timestamp_label
-
-    @staticmethod
-    def _file_exists(file_name):
-        exists = Path(file_name).is_file()
-
-        return exists
-
-    def export_df(self, df, label='', show_index=False, trace=True, *args, **kwargs):
-        self.logger.info("Export path: %s", self.path_out)
-
-        if label == '':
-            label = 'iteration_'
-
-        if not isinstance(df, pd.DataFrame):
-            raise TypeError('Expected type DataFrame, not ' + str(type(df)))
-
-        if not isinstance(label, str):
-            raise TypeError('Expected type str, not ' + str(type(label)))
-
-        if not isinstance(show_index, bool):
-            raise TypeError('Expected type bool, not ' + str(type(show_index)))
-
-        if not isinstance(trace, bool):
-            raise TypeError('Expected type bool, not ' + str(type(trace)))
-
-        all_files = glob.glob(str(Path(self.path_out) / f"{self.timestamp_label}{label}*.csv"))
-
-        file_count = len(all_files)
-        self.logger.info("Previous versions found: %s", file_count)
-
-        buffer = ''
-
-        if trace:
-            try:
-                buffer = str(Path(self.path_out) / f"{self.timestamp_label}{label}{file_count + 1}.csv")
-                df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
-            except Exception:
-                self.logger.exception("Error writing CSV")
-                raise
-
-        elif not trace:
-            try:
-                buffer = str(Path(self.path_out) / f"{self.timestamp_label}{label}.csv")
-                df.to_csv(path_or_buf=buffer, index=show_index, *args, **kwargs)
-            except Exception:
-                self.logger.exception("Error writing CSV")
-                raise
-
-        file_exists = self._file_exists(buffer)
-
-        if not file_exists:
-            raise IOError("Exported file not found.")
-        else:
-            self.logger.info('Exported trace: %s', buffer)
-            print('Exported: ' + buffer)
-
-        return
+    def path_out(self, value: str) -> None:
+        self._path_out = _validate_dir(value)
 
 
-class Import(object):
-        _path_in = './'
-        _singleton = None
+state = _State()
 
-        def __new__(cls, *args, **kwargs):
-            if not cls._singleton:
-                cls._singleton = super(Import, cls).__new__(cls, *args, **kwargs)
-                cls.logger = logging.getLogger(__name__)
-            return cls._singleton
 
-        @property
-        def path_in(self):
-            return self._path_in
+def _file_exists(file_name: Path) -> bool:
+    return file_name.is_file()
 
-        @path_in.setter
-        def path_in(self, value):
-            path = Path(value)
-            if not path.is_dir():
-                raise TypeError("Exception: Not a valid path")
-            self._path_in = value
-            return
 
-        def import_df(self, file_name, *args, **kwargs):
-            df = None
-            all_files = glob.glob(os.path.join(self.path_in, "*.csv"))
+def export_df(
+    df: pd.DataFrame,
+    label: str = "",
+    show_index: bool = False,
+    trace: bool = True,
+    *args: Any,
+    **kwargs: Any,
+) -> None:
+    logger.info("Export path: %s", state.path_out)
 
-            if not all_files:
-                self.logger.info("Import directory is empty.")
-                raise IOError
+    if label == "":
+        label = "iteration_"
 
-            all_files.sort()
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError(f"Expected DataFrame, got {type(df).__name__}")
+    if not isinstance(label, str):
+        raise TypeError(f"label must be str, got {type(label).__name__}")
+    if not isinstance(show_index, bool):
+        raise TypeError(f"show_index must be bool, got {type(show_index).__name__}")
+    if not isinstance(trace, bool):
+        raise TypeError(f"trace must be bool, got {type(trace).__name__}")
 
-            try:
-                matches = [y for y in all_files if file_name in y]
-                if not matches:
-                    raise IndexError(f"No file matching {file_name!r} in {self.path_in}")
-                if len(matches) > 1:
-                    raise ValueError(
-                        f"ambiguous match for {file_name!r}: found {len(matches)} files: {matches}"
-                    )
-                file = matches[0]
-                df = pd.read_csv(file, low_memory=False, encoding='utf-8', *args, **kwargs)
-                self.logger.info("Imported file: " + file)
-                self.logger.info("Total rows: %d", len(df))
-            except IndexError:
-                self.logger.exception('No file found with that name.')
-                raise
+    out_dir = Path(state.path_out)
+    all_files = glob.glob(str(out_dir / f"{state.timestamp_label}{label}*.csv"))
+    file_count = len(all_files)
+    logger.info("Previous versions found: %s", file_count)
 
-            return df
+    if trace:
+        path = out_dir / f"{state.timestamp_label}{label}{file_count + 1:02d}.csv"
+    else:
+        path = out_dir / f"{state.timestamp_label}{label}.csv"
+
+    to_csv_kwargs = {"path_or_buf": str(path), "index": show_index, **kwargs}
+    try:
+        df.to_csv(*args, **to_csv_kwargs)
+    except Exception:
+        logger.exception("Error writing CSV")
+        raise
+
+    if not _file_exists(path):
+        raise OSError(f"Exported file not found: {path}")
+    logger.info("Exported: %s", path)
+
+
+def import_df(file_name: str, *args: Any, **kwargs: Any) -> pd.DataFrame:
+    in_dir = Path(state.path_in)
+    all_files = sorted(glob.glob(str(in_dir / "*.csv")))
+
+    if not all_files:
+        logger.info("Import directory is empty: %s", in_dir)
+        raise OSError(f"Import directory is empty: {in_dir}")
+
+    matches = [path for path in all_files if file_name in path]
+    if not matches:
+        logger.error("No file matching %r in %s", file_name, in_dir)
+        raise IndexError(f"No file matching {file_name!r} in {in_dir}")
+    if len(matches) > 1:
+        raise ValueError(
+            f"ambiguous match for {file_name!r}: found {len(matches)} files: {matches}"
+        )
+
+    file_path = matches[0]
+    read_csv_kwargs = {"low_memory": False, "encoding": "utf-8", **kwargs}
+    df = cast(pd.DataFrame, pd.read_csv(file_path, *args, **read_csv_kwargs))
+    logger.info("Imported file: %s", file_path)
+    logger.info("Total rows: %d", len(df))
+    return df
+
+
+def export_df_versioned(
+    df: pd.DataFrame,
+    label: str = "",
+    show_index: bool = False,
+    *args: Any,
+    **kwargs: Any,
+) -> None:
+    return export_df(df, label, show_index, True, *args, **kwargs)
+
+
+def export_df_overwrite(
+    df: pd.DataFrame,
+    label: str = "",
+    show_index: bool = False,
+    *args: Any,
+    **kwargs: Any,
+) -> None:
+    return export_df(df, label, show_index, False, *args, **kwargs)
