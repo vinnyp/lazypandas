@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lazypandas"
-version = "0.2.0"
+version = "0.3.0"
 description = "A collection of data wrangling helper methods for pandas."
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov>=5"]
+dev = ["pytest>=8", "pytest-cov>=5", "ruff>=0.6", "mypy>=1.10", "pandas-stubs"]
 
 [project.urls]
 Homepage = "https://github.com/vinnyp/lazypandas"
@@ -44,3 +44,20 @@ addopts = "-ra --cov=lazypandas --cov-report=term-missing"
 [tool.coverage.report]
 fail_under = 80
 show_missing = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src/lazypandas"]

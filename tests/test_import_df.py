@@ -17,8 +17,8 @@ def sample_df():
 
 @pytest.fixture
 def io_dir(tmp_path):
-    lp.path_in = str(tmp_path)
-    lp.path_out = str(tmp_path)
+    lp.state.path_in = str(tmp_path)
+    lp.state.path_out = str(tmp_path)
     return tmp_path
 
 
@@ -46,6 +46,5 @@ def test_file_imported_contents_match(sample_df, io_dir):
 
 
 def test_invalid_path():
-    lp.path_in = "not_a_valid_path"
-    with pytest.raises((FileNotFoundError, NotADirectoryError, OSError, IOError, TypeError, ValueError, IndexError)):
-        lp.import_df("missing.csv")
+    with pytest.raises(NotADirectoryError):
+        lp.state.path_in = "not_a_valid_path"
