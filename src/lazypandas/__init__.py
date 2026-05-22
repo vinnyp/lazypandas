@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import
 from . import io
+from .examine import missing_summary, missing_values
 from .io import Export, Import
 import logging
 
@@ -27,4 +28,4 @@ def export_df(*args, **kwargs):
 
 __version__ = '0.1.0'
 __author__ = 'Vinny Pasceri <vinnypasceri@gmail.com>'
-__all__ = []
+__all__ = ["missing_summary", "missing_values"]
