@@ -36,3 +36,20 @@ def test_b3_export_df_handles_exception_correctly(tmp_path, monkeypatch):
     # masking the IOError("Exported file not found.") that the function intends.
     with pytest.raises((OSError, IOError)):
         lp.export_df(_sample_df(), label="boomtest", trace=False)
+
+
+def test_b1_import_df_logs_correct_row_count(tmp_path, caplog):
+    """B1: import_df logs len(file) (filename length) instead of len(df)."""
+    df = _sample_df()  # 5 rows
+    # Write directly with pandas to avoid relying on export_df (B4 path bug
+    # fixed in a later task).
+    df.to_csv(tmp_path / "rows_check.csv", index=False)
+    lp.path_in = str(tmp_path)
+    lp.path_out = str(tmp_path)
+
+    import logging
+    with caplog.at_level(logging.INFO, logger="lazypandas.io"):
+        lp.import_df("rows_check.csv")
+
+    # Must log "Total rows: 5", not the length of the file path string.
+    assert any("Total rows: 5" in rec.getMessage() for rec in caplog.records)
